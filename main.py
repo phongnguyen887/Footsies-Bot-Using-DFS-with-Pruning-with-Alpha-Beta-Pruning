@@ -1,6 +1,6 @@
 import subprocess # This library would be used to open the game FOOTSIES.exe
 import time # This would be used to delay keyboard presses and wait for the game to launch
-from pymem  import Pymem # This library allows for the manipulation for processes in Windows
+from pymem  import Pymem as pm # This library allows for the manipulation for processes in Windows
 import keyboard # This library will allows the program to send keybaord inputs to the game
 # We can use these two libraries to force the installation of the necessary libraries
 import os
@@ -76,15 +76,51 @@ FRAME_DATA = {
     }
 }
 
-
-
-
 GAME_PATH = "[GAME PATH GOES HERE]" # For this project I'm going to assume that the game is going on desktop
 
 # Below are going to be addresses for getting the distances of the Player 1 (bot) and Player 2 (CPU or Human)
 P1_X_ADDRESS = 0 # Replace with real base memory addresses
-P2_X_ADDRESS = 0 #  ''                                      ''
+P2_X_ADDRESS = 0 # Replace with real base memory addresses
 
-def get_distances(): # Using the memory addresses, we can then calculate the distances 
+def get_distance():
+    p1_x = pm.read_int(P1_X_ADDRESS)
+    p2_x = pm.read_int(P2_X_ADDRESS)
+    return abs(p1_x - p2_x)
+
+# Evaluation function: Scores the game state for Player 1.
+def evaluate():
+    pass
+# Generate possible child states based on available moves
+def get_children(state, is_p1_turn):
     pass
 
+def decided_move():
+    pass
+
+# Alpha-beta pruning implementation
+def alpha_beta(state, depth, alpha, beta, is_maximizing_player):
+    if depth == 0 or abs(state[0] - state[1]) == 1:  # Terminal state or striking range
+        return evaluate(state)
+
+    if is_maximizing_player:
+        max_eval = float('-inf')
+        for child in get_children(state, True):
+            eval = alpha_beta(child, depth - 1, alpha, beta, False)
+            max_eval = max(max_eval, eval)
+            alpha = max(alpha, eval)
+            if beta <= alpha:  # Beta cutoff
+                break
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for child in get_children(state, False):
+            eval = alpha_beta(child, depth - 1, alpha, beta, True)
+            min_eval = min(min_eval, eval)
+            beta = min(beta, eval)
+            if beta <= alpha:  # Alpha cutoff
+                break
+        return min_eval
+
+
+def main():
+    pass
