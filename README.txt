@@ -22,7 +22,6 @@ For this program, the game should run once upon the execution of this program
 
 Required libraries:
 
-- pymem
 - keyboard
 
 These can be installed by a pip install in your machine's command prompt and/or terminal: be sure to follow the steps necessary on your operating system.
