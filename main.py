@@ -1,6 +1,5 @@
 import subprocess # This library would be used to open the game FOOTSIES.exe
 import time # This would be used to delay keyboard presses and wait for the game to launch
-from  # This library allows for the manipulation for processes in Windows
 import keyboard # This library will allows the program to send keybaord inputs to the game
 
 
@@ -16,7 +15,8 @@ FRAME_DATA = {
         "on_block": -3,
         "on_guard_break": 18,
         "properties": "Can cancel into neutral special move by pressing attack on hit and on block",
-        "KO": False # this means that this move ALONE won't KO the opponent
+        "KO": False, # this means that this move ALONE won't KO the opponent
+        "range": 10
     },
     "forward_or_backward_attack": { # This is the knee attack, this can go into a KO attack
         "command": "Forward or Backward + Attack",
@@ -27,8 +27,8 @@ FRAME_DATA = {
         "on_block": -3,
         "on_guard_break": 18,
         "properties": "Can cancel into neutral special move by pressing attack on hit and on block",
-        "KO": False # this means that this move ALONE won't KO the opponent
-
+        "KO": False, # this means that this move ALONE won't KO the opponent
+        "range": 10
     },
     "hold_attack_release": { # This is the high kick attack
         "command": "Hold Attack then Neutral + Release",
@@ -39,7 +39,8 @@ FRAME_DATA = {
         "on_block": -10,
         "on_guard_break": 3,
         "properties": None, 
-        "KO": True # This move will KO the opponent
+        "KO": True, # This move will KO the opponent
+        "range": 10
     },
     "hold_attack_direction_release": { # this is the uppercut-type move
         "command": "Hold Attack then Forward or Backward + Release",
@@ -50,7 +51,8 @@ FRAME_DATA = {
         "on_block": -30,
         "on_guard_break": -18,
         "properties": "1F-6F full invincibility", 
-        "KO": True # this move will KO the opponent
+        "KO": True, # this move will KO the opponent
+        "range": 10
     },
     "forward_x2": { # foward dash
         "command": "Forward x2",
@@ -60,7 +62,8 @@ FRAME_DATA = {
         "on_hit": None,
         "on_block": None,
         "on_guard_break": None,
-        "properties": None
+        "properties": None,
+        "range": 10
     },
     "backward_x2": { # back dash
         "command": "Backward x2",
@@ -70,11 +73,12 @@ FRAME_DATA = {
         "on_hit": None,
         "on_block": None,
         "on_guard_break": None,
-        "properties": "1F-4F full invincibility"
+        "properties": "1F-4F full invincibility",
+        "range": 10
     }
 }
 
-GAME_PATH = "C:\Users\mrale\OneDrive\Desktop\FOOTSIES_v1_5_0\FOOTSIES.exe" # For this project I'm going to assume that the game is going on desktop
+GAME_PATH = r"C:\Users\ardui\Downloads\FOOTSIES_v1_5_0\FOOTSIES_v1_5_0\FOOTSIES.exe" # For this project I'm going to assume that the game is going on desktop
 
 # Virtual grid and character positions
 GRID_SIZE = 100  # Total number of grid cells
@@ -83,8 +87,15 @@ opponent_position = 80  # Initial position of the opponent (CPU)
 
 # Launch the game
 def launch_game():
-    subprocess.Popen(GAME_PATH, shell=True)
-    time.sleep(5)  # Allow the game to load
+    try:
+        game_process = subprocess.Popen(GAME_PATH, shell=True)
+        if game_process is None:
+            raise ValueError("Failed to start the game process.")
+        time.sleep(5)  # Allow the game to load
+        return game_process
+    except Exception as e:
+        print(f"Error launching the game: {e}")
+        return None
 
 # Calculate distance based on positions
 def calculate_distance():
@@ -136,7 +147,8 @@ def simulate_move(state, move):
     if move in FRAME_DATA:
         move_data = FRAME_DATA[move]
         new_state['distance'] = max(0, state['distance'] - move_data.get('range', 0))
-        new_state['ai_frame_advantage'] = move_data.get('on_hit', 0) >= 0
+        on_hit_value = move_data.get('on_hit', 0) or 0
+        new_state['ai_frame_advantage'] = on_hit_value >= 0
     return new_state
 
 # Minimax with alpha-beta pruning
@@ -168,33 +180,53 @@ def minimax_alpha_beta(state, depth, alpha, beta, maximizing_player):
 # Main loop
 def main():
     global bot_position, opponent_position
-    launch_game()
+    game_process = launch_game()
+    if not game_process:
+        print("Failed to launch the game. Exiting.")
+        return
 
-    while True:
-        # Calculate distance and construct the game state
-        distance = calculate_distance()
-        game_state = {
-            'distance': distance,
-            'ai_frame_advantage': True,  # Assume AI starts with frame advantage
-            'opponent_move': 'idle',  # Replace with actual detection if possible
-        }
+    time.sleep(5)  # Allow the game to load
+    
+    try:
+        while True:
+            # Check if the game process has exited
+            if game_process.poll() is not None:  # If poll() is not None, the process has ended
+                print("Game has exited. Shutting down the bot...")
+                break
+            
+            # Calculate distance and construct the game state
+            distance = calculate_distance()
+            game_state = {
+                'distance': distance,
+                'ai_frame_advantage': True,  # Assume AI starts with frame advantage
+                'opponent_move': 'idle',  # Replace with actual detection if possible
+            }
 
-        # Determine the best move using Minimax
-        best_move = None
-        best_score = float('-inf')
-        for move in get_possible_moves(game_state, 'AI'):
-            new_state = simulate_move(game_state, move)
-            score = minimax_alpha_beta(new_state, depth=2, alpha=float('-inf'), beta=float('inf'), maximizing_player=False)
-            if score > best_score:
-                best_score = score
-                best_move = move
+            # Determine the best move using Minimax
+            best_move = None
+            best_score = float('-inf')
+            for move in get_possible_moves(game_state, 'AI'):
+                new_state = simulate_move(game_state, move)
+                score = minimax_alpha_beta(new_state, depth=2, alpha=float('-inf'), beta=float('inf'), maximizing_player=False)
+                if score > best_score:
+                    best_score = score
+                    best_move = move
 
-        # Perform the best move
-        if best_move:
-            perform_action(best_move)
+            # Perform the best move
+            if best_move:
+                perform_action(best_move)
 
-        # Assume opponent's movement is controlled by the game
-        time.sleep(0.05)
+            # Assume opponent's movement is controlled by the game
+            time.sleep(0.05)
 
+    except KeyboardInterrupt:
+        print("Exiting due to user interruption.")
+    finally:
+        # Ensure the game process is terminated when the bot exits
+        if game_process.poll() is None:  # If the process is still running
+            game_process.terminate()
+        print("Bot and game process terminated.")
+        
+        
 if __name__ == "__main__":
     main()
