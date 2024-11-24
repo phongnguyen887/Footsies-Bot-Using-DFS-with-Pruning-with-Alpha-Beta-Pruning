@@ -1,6 +1,5 @@
 import subprocess # This library would be used to open the game FOOTSIES.exe
 import time # This would be used to delay keyboard presses and wait for the game to launch
-from pymem  import Pymem as pm # This library allows for the manipulation for processes in Windows
 import keyboard # This library will allows the program to send keybaord inputs to the game
 # We can use these two libraries to force the installation of the necessary libraries
 import os
@@ -76,22 +75,19 @@ FRAME_DATA = {
     }
 }
 
-GAME_PATH = "[GAME PATH GOES HERE]" # For this project I'm going to assume that the game is going on desktop
+GAME_PATH = r"[GAME PATH GOES HERE]" # For this project I'm going to assume that the game is going on desktop
 
-# Below are going to be addresses for getting the distances of the Player 1 (bot) and Player 2 (CPU or Human)
-P1_X_ADDRESS = 0 # Replace with real base memory addresses
-P2_X_ADDRESS = 0 # Replace with real base memory addresses
+# Alex, should we have the game.exe in the folder directory?
+
 
 def get_distance():
-    p1_x = pm.read_int(P1_X_ADDRESS)
-    p2_x = pm.read_int(P2_X_ADDRESS)
-    return abs(p1_x - p2_x)
+    pass
 
 # Evaluation function: Scores the game state for Player 1.
 def evaluate():
     pass
 # Generate possible child states based on available moves
-def get_children(state, is_p1_turn):
+def get_children():
     pass
 
 def decided_move():
@@ -123,4 +119,12 @@ def alpha_beta(state, depth, alpha, beta, is_maximizing_player):
 
 
 def main():
-    pass
+    # Launch the game
+    try:
+        process = subprocess.Popen(GAME_PATH, shell=True)
+        print(f"Game launched with PID: {process.pid}")
+    except FileNotFoundError:
+        print("Error: game.exe not found!")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+            
