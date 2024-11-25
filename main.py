@@ -1,7 +1,9 @@
 import subprocess # This library would be used to open the game FOOTSIES.exe
 import time # This would be used to delay keyboard presses and wait for the game to launch
 import keyboard # This library will allows the program to send keybaord inputs to the game
-
+import pyautogui
+import cv2
+import numpy as np
 
 
 # Frame data for moves
@@ -185,13 +187,44 @@ def main():
         print("Failed to launch the game. Exiting.")
         return
 
-    time.sleep(5)  # Allow the game to load
+    time.sleep(10)  # Allow the game to load
     
+
     try:
         while True:
             # Check if the game process has exited
             if game_process.poll() is not None:  # If poll() is not None, the process has ended
                 print("Game has exited. Shutting down the bot...")
+                break
+            
+                
+        # Capture the screen (adjust the region as needed)
+            screenshot = pyautogui.screenshot()
+            screenshot = np.array(screenshot)
+            frame = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
+            
+            # Convert to grayscale
+            gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
+            
+            # Apply edge detection
+            edges = cv2.Canny(blurred_image, 100, 200)
+            
+            # Find contours
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            # Draw rectangles around detected contours
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area > 1000:  # Minimum area threshold
+                    x, y, w, h = cv2.boundingRect(contour)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            
+            # Display the frame with rectangles
+            cv2.imshow('Game Detection', frame)
+            
+            # Break the loop if 'q' is pressed
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             
             # Calculate distance and construct the game state
@@ -200,7 +233,7 @@ def main():
                 'distance': distance,
                 'ai_frame_advantage': True,  # Assume AI starts with frame advantage
                 'opponent_move': 'idle',  # Replace with actual detection if possible
-            }
+            }  
 
             # Determine the best move using Minimax
             best_move = None
@@ -223,6 +256,7 @@ def main():
         print("Exiting due to user interruption.")
     finally:
         # Ensure the game process is terminated when the bot exits
+        cv2.destroyAllWindows()
         if game_process.poll() is None:  # If the process is still running
             game_process.terminate()
         print("Bot and game process terminated.")
