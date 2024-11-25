@@ -189,6 +189,78 @@ def main():
 
     time.sleep(10)  # Allow the game to load
     
+        # Capture the screen (adjust the region as needed)
+    screenshot = pyautogui.screenshot()
+    screenshot = np.array(screenshot)
+    frame = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
+            
+            # Convert to grayscale
+    gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
+            
+            # Apply edge detection
+    edges = cv2.Canny(blurred_image, 100, 200)
+            
+            # Find contours
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            # Draw rectangles around detected contours
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > 1000:  # Minimum area threshold
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            
+    time.sleep(25)
+
+    '''
+    import cv2
+import numpy as np
+import mss
+from deep_sort_realtime.deepsort_tracker import DeepSort
+from yolov8 import YOLO
+
+# Initialize YOLOv8 and DeepSORT
+model = YOLO('yolov8n.pt')  # Load YOLOv8 model (choose the appropriate model)
+deepsort = DeepSort()
+
+# Initialize MSS for screen capture
+monitor = {'top': 0, 'left': 0, 'width': 1920, 'height': 1080}  # Define screen region to capture
+sct = mss.mss()
+
+while True:
+    # Capture a screenshot of the screen
+    screenshot = sct.grab(monitor)
+    frame = np.array(screenshot)  # Convert to NumPy array
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)  # Convert BGRA to BGR (OpenCV format)
+    
+    # Perform object detection using YOLOv8
+    results = model(frame)
+    detections = results.xywh[0].cpu().numpy()  # Get detections in xywh format
+    
+    # Apply DeepSORT tracking
+    trackers = deepsort.update_tracks(detections, frame)
+    
+    # Visualize the tracking results on the frame
+    for track in trackers:
+        if track.is_confirmed():
+            x1, y1, x2, y2 = track.to_tlbr()  # Convert to top-left, bottom-right
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)  # Draw bounding box
+            cv2.putText(frame, str(track.track_id), (int(x1), int(y1)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    
+    # Show the frame with object detection and tracking
+    cv2.imshow("Screen Capture with YOLOv8 and DeepSORT", frame)
+
+    # Exit on pressing 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release resources
+cv2.destroyAllWindows()
+
+this might helps. im too tired too look at it rn. its 3am for me :v hopefully this help, i grab it 
+after trying the capture from screen which doesnt seem to work properly.
+    '''
 
     try:
         while True:
@@ -197,35 +269,6 @@ def main():
                 print("Game has exited. Shutting down the bot...")
                 break
             
-                
-        # Capture the screen (adjust the region as needed)
-            screenshot = pyautogui.screenshot()
-            screenshot = np.array(screenshot)
-            frame = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
-            
-            # Convert to grayscale
-            gray_image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
-            
-            # Apply edge detection
-            edges = cv2.Canny(blurred_image, 100, 200)
-            
-            # Find contours
-            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-            # Draw rectangles around detected contours
-            for contour in contours:
-                area = cv2.contourArea(contour)
-                if area > 1000:  # Minimum area threshold
-                    x, y, w, h = cv2.boundingRect(contour)
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            
-            # Display the frame with rectangles
-            cv2.imshow('Game Detection', frame)
-            
-            # Break the loop if 'q' is pressed
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
             
             # Calculate distance and construct the game state
             distance = calculate_distance()
