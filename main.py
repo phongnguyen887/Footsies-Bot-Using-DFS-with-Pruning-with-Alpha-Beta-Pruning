@@ -1,12 +1,8 @@
 import subprocess # This library would be used to open the game FOOTSIES.exe
 import time # This would be used to delay keyboard presses and wait for the game to launch
 import keyboard # This library will allows the program to send keybaord inputs to the game
-import pyautogui
 import cv2
 import numpy as np
-import mss
-from deep_sort_realtime.deepsort_tracker import DeepSort
-from ultralytics import YOLO
 
 
 # Frame data for moves
@@ -15,7 +11,7 @@ FRAME_DATA = {
         "command": "Neutral + Attack",
         "startup": 5,
         "active": 2,
-        "recovery": 16,
+        "recovery": -16,
         "on_hit": -1,
         "on_block": -3,
         "on_guard_break": 18,
@@ -27,7 +23,7 @@ FRAME_DATA = {
         "command": "Forward or Backward + Attack",
         "startup": 4,
         "active": 3,
-        "recovery": 15,
+        "recovery": -15,
         "on_hit": -1,
         "on_block": -3,
         "on_guard_break": 18,
@@ -39,7 +35,7 @@ FRAME_DATA = {
         "command": "Hold Attack then Neutral + Release",
         "startup": 12,
         "active": 4,
-        "recovery": 29,
+        "recovery": -29,
         "on_hit": None,
         "on_block": -10,
         "on_guard_break": 3,
@@ -51,7 +47,7 @@ FRAME_DATA = {
         "command": "Hold Attack then Forward or Backward + Release",
         "startup": 3,
         "active": 6,
-        "recovery": 47,
+        "recovery": -47,
         "on_hit": None,
         "on_block": -30,
         "on_guard_break": -18,
@@ -63,7 +59,7 @@ FRAME_DATA = {
         "command": "Forward x2",
         "startup": None,
         "active": None,
-        "recovery": 16,
+        "recovery": -16,
         "on_hit": None,
         "on_block": None,
         "on_guard_break": None,
@@ -74,7 +70,7 @@ FRAME_DATA = {
         "command": "Backward x2",
         "startup": None,
         "active": None,
-        "recovery": 22,
+        "recovery": -22,
         "on_hit": None,
         "on_block": None,
         "on_guard_break": None,
@@ -85,8 +81,8 @@ FRAME_DATA = {
 
 GAME_PATH = r"C:\Users\ardui\Downloads\FOOTSIES_v1_5_0\FOOTSIES_v1_5_0\FOOTSIES.exe" # For this project I'm going to assume that the game is going on desktop
 
-# Virtual grid and character positions
-GRID_SIZE = 100  # Total number of grid cells
+
+initial_distance = 50 # subject to change
 bot_position = 20  # Initial position of the bot
 opponent_position = 80  # Initial position of the opponent (CPU)
 
@@ -102,12 +98,9 @@ def launch_game():
         print(f"Error launching the game: {e}")
         return None
 
-# Calculate distance based on positions
-def calculate_distance():
-    global bot_position, opponent_position
-    return abs(bot_position - opponent_position)
 
-# Perform an action using the keyboard and update grid positions
+
+# Perform an action using the keyboard 
 def perform_action(action):
     global bot_position
     if action == 'neutral_attack':
@@ -122,12 +115,18 @@ def perform_action(action):
         keyboard.press('d')
         time.sleep(0.1)
         keyboard.release('d')
-        bot_position = min(bot_position + 1, GRID_SIZE - 1)  # Update position
+        bot_position = min(bot_position + 1) # Update position
     elif action == 'move_backward':
         keyboard.press('a')
         time.sleep(0.1)
         keyboard.release('a')
         bot_position = max(bot_position - 1, 0)  # Update position
+
+
+# Calculate distance based on positions
+def calculate_distance():
+    global bot_position, opponent_position
+    return abs(bot_position - opponent_position)
 
 # Evaluate the game state
 def evaluate_game_state(state):
@@ -145,6 +144,13 @@ def get_possible_moves(state, player):
     if player == 'AI' and state['distance'] < FRAME_DATA['neutral_attack']['range'] and state['opponent_move'] == 'neutral_attack':
         moves.remove('move_forward')  # Avoid moving into attack range
     return moves
+
+#To do: Have a better concrete of a evaluation function
+#To do: Right now the get_possible moves are mostly about generating a tree based on the framedata need to used. Get possible move is only for the bot
+#To do: fix up the perform_action, and simulate_move function
+#To do: Modify minimax_alpha_beta based on the perform_action, and simulate_move function
+#To do: Connect minimax_alpha_beta with simulate_move and perform_action
+
 
 # Simulate a move and return the new game state
 def simulate_move(state, move):
@@ -192,56 +198,12 @@ def main():
 
     time.sleep(10)  # Allow the game to load
  
-    # Initialize YOLOv8 and DeepSORT
-    model = YOLO('yolov8n.pt')  # Load YOLOv8 model (choose the appropriate model)
-    deepsort = DeepSort()
-
-    # Initialize MSS for screen capture
-    monitor = {'top': 0, 'left': 0, 'width': 1920, 'height': 1080}  # Define screen region to capture
-    sct = mss.mss()
-
     try:
         while True:
             # Check if the game process has exited
             if game_process.poll() is not None:  # If poll() is not None, the process has ended
                 print("Game has exited. Shutting down the bot...")
                 break
-            
-            
-            '''
-            # Capture a screenshot of the screen
-            screenshot = sct.grab(monitor)
-            frame = np.array(screenshot)  # Convert to NumPy array
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)  # Convert BGRA to BGR (OpenCV format)
-            
-            # Perform object detection using YOLOv8
-            results = model(frame)
-            detections = results.xywh[0].cpu().numpy()  # Get detections in xywh format
-            
-            # Apply DeepSORT tracking
-            trackers = deepsort.update_tracks(detections, frame)
-            
-            # Visualize the tracking results on the frame
-            for track in trackers:
-                if track.is_confirmed():
-                    x1, y1, x2, y2 = track.to_tlbr()  # Convert to top-left, bottom-right
-                    cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)  # Draw bounding box
-                    cv2.putText(frame, str(track.track_id), (int(x1), int(y1)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-            
-            # Show the frame with object detection and tracking
-            cv2.imshow("Screen Capture with YOLOv8 and DeepSORT", frame)
-
-            # Exit on pressing 'q'
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-        # Release resources
-        cv2.destroyAllWindows()
-
-        this might helps. im too tired too look at it rn. its 3am for me :v hopefully this help, i grab it from chat
-        after trying the capture from screen which doesnt seem to work properly.
-            '''
-
             
             # Calculate distance and construct the game state
             distance = calculate_distance()
@@ -256,7 +218,7 @@ def main():
             best_score = float('-inf')
             for move in get_possible_moves(game_state, 'AI'):
                 new_state = simulate_move(game_state, move)
-                score = minimax_alpha_beta(new_state, depth=2, alpha=float('-inf'), beta=float('inf'), maximizing_player=False)
+                score = minimax_alpha_beta(new_state, depth=3, alpha=float('-inf'), beta=float('inf'), maximizing_player=False)
                 if score > best_score:
                     best_score = score
                     best_move = move
