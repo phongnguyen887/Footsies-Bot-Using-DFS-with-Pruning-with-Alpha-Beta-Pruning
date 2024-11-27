@@ -1,10 +1,11 @@
+from pynput.mouse import Listener as MouseListener
 from pynput.keyboard import Key, Controller
-import subprocess
-import random
 import win32gui
 import win32com.client
+import subprocess
+import random
 
-# Initialize the keyboard controller
+# Initialize thae keyboard controller
 keyboard = Controller()
 
 # Key mappings
@@ -63,6 +64,7 @@ FRAME_DATA = {
     },
 }
 
+game_starting = 'False'
 
 # Focus the game window
 def focus_game_window():
@@ -77,7 +79,7 @@ def focus_game_window():
 # Launch the game
 def launch_game():
     try:
-        game_process = subprocess.Popen(r"[INSERT GAME PATH HERE]", shell=True)
+        game_process = subprocess.Popen(r"GAME_PATH", shell=True)
         if game_process is None:
             raise ValueError("Failed to start the game process.")
         print("Game launched.")
@@ -86,6 +88,15 @@ def launch_game():
         print(f"Error launching the game: {e}")
         return None
 
+
+def evaluation_function():
+    pass
+
+def build_tree():
+    pass
+
+def minimax_alpha_beta():
+    pass
 
 # Perform an action using `pynput`
 def perform_action(action):
@@ -130,6 +141,16 @@ def get_possible_moves(movement_state):
         return ["neutral_attack", "move_left", "move_right"]
     return ["forward_attack", "backward_attack", "move_left", "move_right"]
 
+click_count = 0
+def on_click(x, y, button, pressed):
+    global game_starting
+    global click_count
+    if pressed:  # Mouse clicked
+        click_count += 1
+        print(f"Mouse clicked at ({x}, {y}). Starting the game...")
+        if click_count >= 2:
+            game_starting = True
+            return False 
 
 # Main loop
 def main():
@@ -138,16 +159,20 @@ def main():
     if not game_process:
         print("Failed to launch the game. Exiting.")
         return
+    
+    print("Waiting for mouse click to start the game...")
+    with MouseListener(on_click=on_click) as listener:
+        listener.join()  # Wait until the listener stops
 
     movement_state = 'idle'
-
+    
     try:
         while True:
             # Check if the game has exited
             if game_process.poll() is not None:
                 print("Game has exited. Shutting down the bot...")
                 break
-
+              
             # Get possible moves
             possible_moves = get_possible_moves(movement_state)
 
