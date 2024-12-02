@@ -3,9 +3,6 @@ import win32com.client
 import subprocess
 import random
 import time
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename
-
 
 # Initialize the keyboard controller
 keyboard = Controller()
@@ -66,8 +63,7 @@ def focus_game_window():
     except Exception as e:
         print(f"Failed to focus game window: {e}")
 
-
-# Function to launch the game 
+# Function to launch the game
 def launch_game():
     """
     Launches the game executable using subprocess.
@@ -81,7 +77,6 @@ def launch_game():
     except Exception as e:
         print(f"Error launching the game: {e}")
         return None
-
 
 # Tree structure for Minimax decision-making
 class TreeNode:
@@ -270,10 +265,10 @@ def main():
 
             # Regular decision-making with cooldown
             if current_time - last_action_time >= ACTION_COOLDOWN:
-                if random.random() < 0.10:  # 10% chance for random movement 
+                if random.random() < 0.10:  # 10% chance for random movement
                     selected_move = random.choice(["move_left", "move_right"])
                     print(f"Random movement: {selected_move}")
-                else:  # 90% Using Minimax for decision making (which attack to use)
+                else:  # 90% aggressive strategy
                     optimize_value, best_node = minimax_alpha_beta(tree, depth=0, is_maximizing=True, alpha=float('-inf'), beta=float('inf'))
                     selected_move = best_node.name
                     print(f"Optimized value: {optimize_value}, Best move: {selected_move}")
