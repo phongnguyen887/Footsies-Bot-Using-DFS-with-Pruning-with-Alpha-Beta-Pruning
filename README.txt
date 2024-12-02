@@ -11,11 +11,14 @@ FOOTSIES is a fighting game developed by Hifight, its free to download, and will
 The idea of "footsies" appears also every fighting game including some recent ones like "Street Fighter", "Tekken" and many others. Footsies is the tense back-and-forth between two player who are standing and trying to control the space in front of them (known as neutral as well).
 This concept is very important in fighting games in terms of gaining the advantage over your opponent, breaking through their defense, and then winning a round. 
 
+DISCLAIMER: This program is intended for Windows machines
+
 How to download and install FOOTSIES:
 1. Go to this link: https://github.com/hifight/Footsies/releases/tag/1.5.0  
-- NOTE: There are other versions of the game for Mac and Linus respectively so be sure to get the correct version for your machine
-2. Once the download has been completed go ahead and [extract all] from the .zip file
-3. To run: run "FOOTSIES.exe"
+2. Download the game respective to your machine, in this case it would be: FOOTSIES_v1_5_0.zip
+3. Once the download was been completed, locate the .zip folder, and [extract all]
+4. Once extracted, open file FOOTSIES_v1_5_0 and locate FOOTSIES.exe
+5. To run the game: double click on "FOOTSIES.exe"
 
 For this program, the game should run once upon the execution of this program
 
@@ -35,5 +38,5 @@ pip install [library]
 
 IMPORTANT: Make sure the game "FOOTSIES" is available on your computer, and the file path is accurate on the launch_game() function.
 
-DISCLAIMER: This program is intended for Windows machines
+
 
