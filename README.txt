@@ -1,6 +1,6 @@
 AI Bot for the game "FOOTSIES" by HiFight
 
-This program seeks to implement a bot that can play against an opponent (CPU or Human) in the game FOOTSIES. The goal is to use the minimax with alpha-beta pruning in order to accomplish this while making the most rational decisions. 
+This program seeks to implement a bot that can play against an opponent (CPU or Human) in the game FOOTSIES. The goal is to use the Depth-First Search with pruning in order to accomplish this while making the most rational decisions. 
 In order to make sure the bot behaves rational we are using the framedata available to us as well as the x-distances for the bot and opponent to eliminate certain game states.
 
 Note: This bot is omnipotent, and can make non optimal decisions, nor does this bot guarantee a win by any means. This project was created for educational purposes and not meant to promote cheating in anyway shape or form.
@@ -27,6 +27,8 @@ Required libraries:
 * Provides access to Windows-specific features like focusing the game window.
 2. pywin32
 * Gives access to Windows features
+
+The rest of the libraries within the source code are standard within python. It is recommended to use python 3.6 or above to reduce any potential issues with libraries.
 
 These can be installed by a pip install in your machine's command prompt using: 
 pip install [library]
