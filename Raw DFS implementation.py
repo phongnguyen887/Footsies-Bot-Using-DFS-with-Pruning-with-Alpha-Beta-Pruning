@@ -20,6 +20,8 @@ MOVES = [
     "backward_attack",
     "move_left",
     "move_right",
+    "hold_attack_release",
+    "hold_attack_direction_release"
 ]
 
 # Global flags and constants
@@ -89,25 +91,46 @@ def perform_action(action):
         time.sleep(KEYPRESS_DURATION)
         keyboard.release(KEY_MAPPING["d"])
         print("Moved right.")
+    elif action == 'hold_attack_release':
+        keyboard.press(KEY_MAPPING["space"])
+        time.sleep(1)  # Hold for a longer duration
+        keyboard.release(KEY_MAPPING["space"])
+        print("Performed hold attack release.")
+    elif action == 'hold_attack_direction_release':
+        keyboard.press(KEY_MAPPING["d"])  # Example for forward direction
+        keyboard.press(KEY_MAPPING["space"])
+        time.sleep(1)  # Hold for a longer duration
+        keyboard.release(KEY_MAPPING["space"])
+        keyboard.release(KEY_MAPPING["d"])
+        print("Performed hold attack direction release.")
     else:
         print(f"Unknown action: {action}")
 
 # DFS implementation to iterate through moves
-def dfs_moves(moves, depth):
+def dfs_moves(moves, depth, current_path=[], current_depth=0):
     """
-    Perform a raw DFS through the list of moves. Each move is executed in sequence,
-    simulating depth-first exploration of all moves.
+    Perform a raw DFS through the list of moves. Perform the action only at the deepest level.
+
+    Parameters:
+    - moves: List of moves to explore.
+    - depth: Remaining depth to traverse.
+    - current_path: The path taken to reach the current node (for debugging or tracking).
+    - current_depth: The current depth level in the DFS traversal.
     """
-    if depth == 0 or not moves:
+    # Log the current node and depth
+    if current_depth > 0:  # Skip logging for the root node
+        print(f"At depth {current_depth}, exploring move: {current_path[-1]}")
+
+    if depth == 0:
+        # Reached the maximum depth; perform the action corresponding to the current move
+        move_to_perform = current_path[-1]  # The last move in the path
+        print(f"Reached depth {current_depth}. Performing action: {move_to_perform}")
+        perform_action(move_to_perform)
         return
 
     for move in moves:
-        # Perform the action corresponding to the current move
-        perform_action(move)
-        time.sleep(ACTION_COOLDOWN)  # Add a cooldown between actions
-
-        # Recursively explore the same moves with one less depth
-        dfs_moves(moves, depth - 1)
+        # Continue the DFS traversal, appending the current move to the path
+        dfs_moves(moves, depth - 1, current_path + [move], current_depth + 1)
 
 # Start game on Enter key press
 def on_key_press(key):
