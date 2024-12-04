@@ -19,11 +19,11 @@ FRAME_DATA = {
     "neutral_attack": {
         "state": "idle",
         "command": "Neutral + Attack",
-        "startup": 5,          # Frames before move becomes active
-        "active": 2,           # Frames during which the move is active
-        "recovery": 16,        # Frames before the bot can act again
-        "can_cancel": True,    # Indicates if the move can cancel into another
-        "KO": False,           # Whether the move can cause a KO
+        "startup": 5, 
+        "active": 2, 
+        "recovery": 16, 
+        "can_cancel": True, 
+        "KO": False
     },
     "forward_attack": {
         "state": "forward",
@@ -32,7 +32,7 @@ FRAME_DATA = {
         "active": 3,
         "recovery": 15,
         "can_cancel": True,
-        "KO": False,
+        "KO": False
     },
     "backward_attack": {
         "state": "backward",
@@ -41,8 +41,24 @@ FRAME_DATA = {
         "active": 2,
         "recovery": 20,
         "can_cancel": True,
-        "KO": False,
+        "KO": False
     },
+    "hold_attack_release": {
+        "command": "Hold Attack then Neutral + Release",
+        "startup": 12,
+        "active": 4,
+        "recovery": 29,
+        "can_cancel": False,
+        "KO": True
+    },
+    "hold_attack_direction_release": {
+        "command": "Hold Attack then Forward or Backward + Release",
+        "startup": 3,
+        "active": 6,
+        "recovery": 47,
+        "can_cancel": False,
+        "KO": True
+    }
 }
 
 # Global flags and constants
@@ -53,21 +69,15 @@ MOVEMENT_PRIORITY_INTERVAL = 1.5  # Time interval to ensure periodic movement (i
 
 # Function to focus the game window
 def focus_game_window():
-    """
-    Brings the game window to the foreground so that key presses are directed to it.
-    """
     try:
         shell = win32com.client.Dispatch("WScript.Shell")
-        shell.AppActivate("FOOTSIES")  # Replace with your game's window title
+        shell.AppActivate("FOOTSIES")
         print("Game window focused.")
     except Exception as e:
         print(f"Failed to focus game window: {e}")
 
 # Function to launch the game
 def launch_game():
-    """
-    Launches the game executable using subprocess.
-    """
     try:
         game_process = subprocess.Popen(r"C:\Users\mrale\OneDrive\Desktop\FOOTSIES_v1_5_0\FOOTSIES.exe", shell=True)
         if game_process is None:
@@ -78,82 +88,59 @@ def launch_game():
         print(f"Error launching the game: {e}")
         return None
 
-# Tree structure for Minimax decision-making
+# Tree structure for decision-making using DFS
 class TreeNode:
     def __init__(self, name, value=None):
-        self.name = name       # Name of the move/action
-        self.value = value     # Evaluated score of the move
-        self.children = []     # Possible subsequent moves
+        self.name = name
+        self.value = value
+        self.children = []
 
     def add_child(self, child_node):
-        """
-        Adds a child node to the current node, representing a subsequent move.
-        """
         self.children.append(child_node)
 
 # Function to create a decision tree for attacks
 def create_tree_for_attack():
-    """
-    Constructs a tree representing the possible sequences of attacks.
-    """
     root = TreeNode("Root")
-
-    # First level
-    attack = TreeNode("neutral_attack")
-    forward_attack = TreeNode("forward_attack")
-    backward_attack = TreeNode("backward_attack")
-    root.add_child(attack)
-    root.add_child(forward_attack)
-    root.add_child(backward_attack)
-
-    # Second level for each branch
-    for parent in [attack, forward_attack, backward_attack]:
-        parent.add_child(TreeNode("neutral_attack"))
-        parent.add_child(TreeNode("forward_attack"))
-        parent.add_child(TreeNode("backward_attack"))
-
+    for move in FRAME_DATA.keys():
+        action_node = TreeNode(move)
+        for follow_up in FRAME_DATA.keys():
+            action_node.add_child(TreeNode(follow_up))
+        root.add_child(action_node)
     return root
 
-# Assign evaluation scores to tree nodes
-def assign_tree_values(tree, move_names):
-    """
-    Assigns evaluation scores to leaf nodes in the tree based on move attributes.
-    """
-    for i, child in enumerate(tree.children):
-        for j, grandchild in enumerate(child.children):
-            move_name = move_names[i][j]
-            grandchild.value = evaluation_function(move_name)
-
 # Function to evaluate moves
-def evaluation_function(move_name):
-    """
-    Calculates a score for a move based on its frame data, prioritizing aggressive moves.
-    """
+def evaluation_function(move_name, last_move, consecutive_moves):
     move_data = FRAME_DATA[move_name]
     score = (
-        (20 / (move_data["startup"] + 1)) +  # Favor faster startup
-        (10 * move_data["active"]) -         # Prioritize active frames
-        (move_data["recovery"] / 4)          # Reduce penalty for recovery
+        (20 / (move_data["startup"] + 1)) +
+        (10 * move_data["active"]) -
+        (move_data["recovery"] / 4)
     )
     if move_data["can_cancel"]:
-        score += 25  # Bonus for cancellable moves
+        score += 25
     if move_data["KO"]:
-        score += 30  # Bonus for KO moves
+        score += 30
+
+    # Penalize consecutive repeated moves
+    if move_name == last_move:
+        penalty = 10 + (5 * consecutive_moves)
+        score -= penalty
+
+    # Add random variation
+    score += random.uniform(0, 5)
+
     return score
 
-# Minimax algorithm with alpha-beta pruning
-def minimax_alpha_beta(node, depth, is_maximizing, alpha, beta):
-    """
-    Recursive Minimax algorithm with alpha-beta pruning for optimal decision-making.
-    """
+# Depth-First Search (DFS) with Alpha-Beta Pruning
+def dfs_with_pruning(node, depth, is_maximizing, alpha, beta, last_move, consecutive_moves):
     if not node.children:
-        return node.value, node
+        return evaluation_function(node.name, last_move, consecutive_moves), node
 
     best_node = None
     if is_maximizing:
         max_eval = float('-inf')
         for child in node.children:
-            eval, _ = minimax_alpha_beta(child, depth + 1, False, alpha, beta)
+            eval, _ = dfs_with_pruning(child, depth + 1, False, alpha, beta, last_move, consecutive_moves)
             if eval > max_eval:
                 max_eval = eval
                 best_node = child
@@ -164,7 +151,7 @@ def minimax_alpha_beta(node, depth, is_maximizing, alpha, beta):
     else:
         min_eval = float('inf')
         for child in node.children:
-            eval, _ = minimax_alpha_beta(child, depth + 1, True, alpha, beta)
+            eval, _ = dfs_with_pruning(child, depth + 1, True, alpha, beta, last_move, consecutive_moves)
             if eval < min_eval:
                 min_eval = eval
                 best_node = child
@@ -175,9 +162,6 @@ def minimax_alpha_beta(node, depth, is_maximizing, alpha, beta):
 
 # Function to perform actions
 def perform_action(action):
-    """
-    Executes the specified action by simulating key presses.
-    """
     focus_game_window()
     if action == 'neutral_attack':
         keyboard.press(KEY_MAPPING["space"])
@@ -198,24 +182,23 @@ def perform_action(action):
         keyboard.release(KEY_MAPPING["space"])
         keyboard.release(KEY_MAPPING["a"])
         print("Performed backward attack.")
-    elif action == 'move_left':
-        keyboard.press(KEY_MAPPING["a"])
-        time.sleep(KEYPRESS_DURATION)
-        keyboard.release(KEY_MAPPING["a"])
-        print("Moved left.")
-    elif action == 'move_right':
+    elif action == 'hold_attack_release':
+        keyboard.press(KEY_MAPPING["space"])
+        time.sleep(0.5)  # Simulate holding the attack
+        keyboard.release(KEY_MAPPING["space"])
+        print("Performed hold attack release.")
+    elif action == 'hold_attack_direction_release':
         keyboard.press(KEY_MAPPING["d"])
-        time.sleep(KEYPRESS_DURATION)
+        keyboard.press(KEY_MAPPING["space"])
+        time.sleep(0.5)  # Simulate holding the attack
+        keyboard.release(KEY_MAPPING["space"])
         keyboard.release(KEY_MAPPING["d"])
-        print("Moved right.")
+        print("Performed hold attack direction release.")
     else:
         print(f"Unknown action: {action}")
 
 # Start game on Enter key press
 def on_key_press(key):
-    """
-    Starts the bot when the Enter key is pressed.
-    """
     global game_starting
     if key == Key.enter:
         game_starting = True
@@ -223,13 +206,7 @@ def on_key_press(key):
         return False
 
 # Decision tree initialization
-move_names = [
-    ["neutral_attack", "forward_attack", "backward_attack"],
-    ["forward_attack", "neutral_attack", "backward_attack"],
-    ["backward_attack", "neutral_attack", "forward_attack"],
-]
 tree = create_tree_for_attack()
-assign_tree_values(tree, move_names)
 
 # Main loop
 def main():
@@ -245,7 +222,8 @@ def main():
         listener.join()
 
     last_action_time = 0
-    last_movement_time = 0
+    last_move = None
+    consecutive_moves = 0
 
     try:
         while True:
@@ -256,24 +234,21 @@ def main():
             current_time = time.time()
 
             # Ensure periodic movement
-            if current_time - last_movement_time >= MOVEMENT_PRIORITY_INTERVAL:
-                selected_move = random.choice(["move_left", "move_right"])
-                print(f"Prioritized movement: {selected_move}")
-                perform_action(selected_move)
-                last_movement_time = current_time
-                continue
-
-            # Regular decision-making with cooldown
             if current_time - last_action_time >= ACTION_COOLDOWN:
-                if random.random() < 0.10:  # 10% chance for random movement
-                    selected_move = random.choice(["move_left", "move_right"])
-                    print(f"Random movement: {selected_move}")
-                else:  # 90% aggressive strategy
-                    optimize_value, best_node = minimax_alpha_beta(tree, depth=0, is_maximizing=True, alpha=float('-inf'), beta=float('inf'))
-                    selected_move = best_node.name
-                    print(f"Optimized value: {optimize_value}, Best move: {selected_move}")
+                optimize_value, best_node = dfs_with_pruning(
+                    tree, depth=0, is_maximizing=True, alpha=float('-inf'), beta=float('inf'),
+                    last_move=last_move, consecutive_moves=consecutive_moves
+                )
+                selected_move = best_node.name
+
+                # Update consecutive move tracking
+                if selected_move == last_move:
+                    consecutive_moves += 1
+                else:
+                    consecutive_moves = 0
 
                 perform_action(selected_move)
+                last_move = selected_move
                 last_action_time = current_time
 
     except KeyboardInterrupt:
