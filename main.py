@@ -3,6 +3,7 @@ import win32com.client
 import subprocess
 import random
 import time
+import os
 
 # Initialize the keyboard controller
 keyboard = Controller()
@@ -79,7 +80,7 @@ def focus_game_window():
 # Function to launch the game
 def launch_game():
     try:
-        game_process = subprocess.Popen(r"C:\Users\mrale\OneDrive\Desktop\FOOTSIES_v1_5_0\FOOTSIES.exe", shell=True)
+        game_process = subprocess.Popen(os.path.abspath("FOOTSIES_v1_5_0\FOOTSIES.exe"), shell=True)
         if game_process is None:
             raise ValueError("Failed to start the game process.")
         print("Game launched.")
